@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# Update UID/GID if requested
+if [[ "$(id -u)" == "0" ]]; then
+    if [[ -n "${PUID}" ]] && [[ "${PUID}" != "$(id -u ${USER})" ]]; then
+        echo "Updating UID to ${PUID}"
+        usermod -u "${PUID}" "${USER}"
+    fi
+
+    if [[ -n "${PGID}" ]] && [[ "${PGID}" != "$(id -g ${USER})" ]]; then
+        echo "Updating GID to ${PGID}"
+        groupmod -g "${PGID}" "${USER}"
+    fi
+
+    # Fix ownership after UID/GID change
+    if [[ -n "${PUID}" ]] || [[ -n "${PGID}" ]]; then
+        echo "Fixing ownership of ${HOMEDIR} and ${STEAMAPPDIR}..."
+        chown -R "${USER}:${USER}" "${HOMEDIR}" "${STEAMAPPDIR}" 2>/dev/null || true
+    fi
+
+    # Switch to steam user for remaining operations, preserving environment
+    exec su -p "${USER}" -c "export HOME=${HOMEDIR}; cd ${HOMEDIR}; exec bash $0"
+fi
+
 # Debug
 
 ## Steamcmd debugging

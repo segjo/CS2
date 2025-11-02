@@ -10,6 +10,7 @@ LABEL maintainer="joedwards32@gmail.com"
 
 # TODO - Separate stage
 ARG PUID=1000
+ARG PGID=1000
 ENV USER steam
 ENV HOMEDIR "/home/${USER}"
 ENV STEAMCMDDIR "${HOMEDIR}/steamcmd"
@@ -25,7 +26,8 @@ RUN set -x \
                 libicu-dev \
                 unzip \
 		jq \
-        && useradd -u "${PUID}" -m "${USER}" \
+        && groupadd -g "${PGID}" "${USER}" \
+        && useradd -u "${PUID}" -g "${PGID}" -m "${USER}" \
 	&& mkdir -p "${STEAMCMDDIR}" \
 	# Add entry script
 	&& chown -R "${USER}:${USER}" "${HOMEDIR}" \
@@ -77,7 +79,9 @@ ENV CS2_SERVERNAME="cs2 private server" \
     CS2_LOG_MONEY=0 \
     CS2_LOG_DETAIL=0 \
     CS2_LOG_ITEMS=0 \
-    CS2_ADDITIONAL_ARGS=""
+    CS2_ADDITIONAL_ARGS="" \
+    PUID=1000 \
+    PGID=1000
 
 # Set permissions on STEAMAPPDIR
 #   Permissions may need to be reset if persistent volume mounted
@@ -87,12 +91,11 @@ RUN set -x \
         && chown -R "${USER}:${USER}" "${STEAMAPPDIR}" \
         && chmod 0777 "${STEAMAPPDIR}"
 
-# Switch to user
-USER ${USER}
+# Note: Container starts as root to allow UID/GID changes in entry.sh
 
 WORKDIR ${HOMEDIR}
 
-CMD ["bash", "entry.sh"]
+CMD ["bash", "/home/steam/entry.sh"]
 
 # Expose ports
 EXPOSE 27015/tcp \
